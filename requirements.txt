@@ -1,0 +1,9 @@
+flask
+torch
+transformers
+pillow
+rasterio
+geopandas
+pandas
+scikit-image
+shapely
