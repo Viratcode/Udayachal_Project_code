@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+.venv
+config
+.vscode
+model/__pycache__
+test_segformer.py
+venv/
+debug_output/
+uploads/
+results/
+*.log
+.env
+*.pyc
+.DS_Store
+

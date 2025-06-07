@@ -1,5 +1,508 @@
-<form action="{{ url_for('predict') }}" method="post" enctype="multipart/form-data">
-    <input type="file" name="image" accept=".tif,.tiff" required>
-    <input type="submit" value="Upload and Predict">
-  </form>
-  
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Solar Potential Analysis</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            background-color: #f5f7fa;
+            color: #2c3e50;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 20px;
+            background: linear-gradient(135deg, #00b4db, #0083b0);
+            color: white;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 30px;
+            margin-top: 30px;
+        }
+
+        .control-panel {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .map-container {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        #map {
+            height: 600px;
+            width: 100%;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .upload-section {
+            margin-bottom: 30px;
+        }
+
+        .section-title {
+            font-size: 1.3em;
+            margin-bottom: 20px;
+            color: #2c3e50;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-title i {
+            color: #0083b0;
+        }
+
+        .file-upload {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+        }
+
+        .file-input-wrapper input[type="file"] {
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            cursor: pointer;
+            width: 100%;
+            height: 100%;
+        }
+
+        .file-input-button {
+            display: inline-block;
+            padding: 12px 20px;
+            background: #f0f2f5;
+            border: 2px dashed #0083b0;
+            border-radius: 8px;
+            color: #2c3e50;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .file-input-button:hover {
+            background: #e0e5ea;
+        }
+
+        .btn {
+            padding: 12px 25px;
+            background: linear-gradient(135deg, #00b4db, #0083b0);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 131, 176, 0.3);
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .results {
+            margin-top: 30px;
+            padding: 25px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .result-image {
+            width: 100%;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .solar-potential {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        .metric-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .metric-value {
+            font-size: 1.8em;
+            color: #0083b0;
+            font-weight: 600;
+            margin: 10px 0;
+        }
+
+        .metric-label {
+            color: #6c757d;
+            font-size: 0.9em;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+            background: rgba(255, 255, 255, 0.9);
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+        }
+
+        .loading img {
+            width: 50px;
+            margin-bottom: 15px;
+        }
+
+        .error {
+            background: #fee;
+            color: #e74c3c;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Solar Potential Analysis</h1>
+            <p>Analyze rooftop solar potential using satellite imagery and AI</p>
+        </div>
+
+        <div class="main-content">
+            <div class="control-panel">
+                <div class="upload-section">
+                    <h2 class="section-title">
+                        <i class="fas fa-upload"></i>
+                        Upload GeoTIFF Image
+                    </h2>
+                    <form id="uploadForm" enctype="multipart/form-data">
+                        <div class="file-upload">
+                            <div class="file-input-wrapper">
+                                <div class="file-input-button">
+                                    <i class="fas fa-cloud-upload-alt"></i>
+                                    Choose File
+                                </div>
+                                <input type="file" name="file" accept=".tif,.tiff" required>
+                            </div>
+                            <button type="submit" class="btn">
+                                <i class="fas fa-search"></i>
+                                Analyze Image
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="roi-section">
+                    <h2 class="section-title">
+                        <i class="fas fa-map-marked-alt"></i>
+                        Region Analysis
+                    </h2>
+                    <button id="analyzeROI" class="btn" disabled>
+                        <i class="fas fa-chart-area"></i>
+                        Analyze Selected Region
+                    </button>
+                </div>
+            </div>
+
+            <div class="map-container">
+                <h2 class="section-title">
+                    <i class="fas fa-map"></i>
+                    Interactive Map
+                </h2>
+                <div id="map"></div>
+            </div>
+        </div>
+
+        <div class="results" id="results">
+            <!-- Results will be dynamically populated -->
+        </div>
+
+        <div class="loading" id="loading">
+            <img src="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/0.16.1/images/loader-large.gif" alt="Loading...">
+            <p>Processing your request...</p>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+    <script>
+        // Initialize map with satellite layer
+        var map = L.map('map', {
+            center: [20, 0],
+            zoom: 2,
+            minZoom: 2,
+            maxZoom: 20,
+            zoomSnap: 0.1,  // Allow fine-grained zoom levels
+            zoomDelta: 0.1  // Allow fine-grained zoom control
+        });
+        
+        // Add Google Satellite layer with higher resolution
+        L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+            maxZoom: 20,
+            tileSize: 256,
+            zoomOffset: 0,
+            subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+            attribution: '© Google',
+            detectRetina: true
+        }).addTo(map);
+
+        // Initialize drawing controls
+        var drawnItems = new L.FeatureGroup();
+        map.addLayer(drawnItems);
+
+        var drawControl = new L.Control.Draw({
+            draw: {
+                polygon: false,
+                circle: false,
+                circlemarker: false,
+                polyline: false,
+                marker: false,
+                rectangle: {
+                    shapeOptions: {
+                        color: '#0083b0',
+                        weight: 2
+                    }
+                }
+            },
+            edit: {
+                featureGroup: drawnItems,
+                remove: true
+            }
+        });
+        map.addControl(drawControl);
+
+        // Update file input display
+        document.querySelector('input[type="file"]').addEventListener('change', function(e) {
+            const fileName = e.target.files[0]?.name || 'No file chosen';
+            const button = e.target.previousElementSibling;
+            button.innerHTML = `<i class="fas fa-file-alt"></i> ${fileName}`;
+        });
+
+        // Handle drawing events
+        var currentROI = null;
+        map.on('draw:created', function(e) {
+            drawnItems.clearLayers();
+            currentROI = e.layer;
+            drawnItems.addLayer(currentROI);
+            document.getElementById('analyzeROI').disabled = false;
+        });
+
+        map.on('draw:deleted', function(e) {
+            currentROI = null;
+            document.getElementById('analyzeROI').disabled = true;
+        });
+
+        function formatEnergyUnit(value) {
+            if (value >= 1000000) {
+                return `${(value/1000000).toFixed(2)} GWh/year`;
+            } else if (value >= 1000) {
+                return `${(value/1000).toFixed(2)} MWh/year`;
+            }
+            return `${Math.round(value)} kWh/year`;
+        }
+
+        function formatArea(value) {
+            if (value >= 1000000) {
+                return `${(value/1000000).toFixed(2)} km²`;
+            }
+            return `${Math.round(value)} m²`;
+        }
+
+        // Handle form submission
+        document.getElementById('uploadForm').onsubmit = function(e) {
+            e.preventDefault();
+            var formData = new FormData(this);
+            submitAnalysis(formData, 'process');
+        };
+
+        // Handle ROI analysis
+        document.getElementById('analyzeROI').onclick = function() {
+            if (!currentROI) return;
+            
+            var bounds = currentROI.getBounds();
+            var data = {
+                north: bounds.getNorth(),
+                south: bounds.getSouth(),
+                east: bounds.getEast(),
+                west: bounds.getWest()
+            };
+            submitAnalysis(data, 'process_roi');
+        };
+
+        function submitAnalysis(data, endpoint) {
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('results').innerHTML = '';
+
+            fetch('/' + endpoint, {
+                method: 'POST',
+                body: data instanceof FormData ? data : JSON.stringify(data),
+                headers: data instanceof FormData ? {} : {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('loading').style.display = 'none';
+                if (data.error) {
+                    document.getElementById('results').innerHTML = `
+                        <div class="error">
+                            <i class="fas fa-exclamation-circle"></i>
+                            ${data.error}
+                        </div>`;
+                    return;
+                }
+
+                // Ensure panel_info exists
+                data.panel_info = data.panel_info || {
+                    type: 'Monocrystalline PERC',
+                    efficiency: 18,
+                    lifespan: 25
+                };
+
+                // Display results
+                var resultsHtml = `
+                    <h2 class="section-title">
+                        <i class="fas fa-chart-pie"></i>
+                        Analysis Results
+                    </h2>
+                    <div class="results-grid">
+                        <div>
+                            <h3 class="section-title">Input Image</h3>
+                            <img src="/results/${data.input_file}" alt="Input Image" class="result-image">
+                        </div>
+                        <div>
+                            <h3 class="section-title">Detection Mask</h3>
+                            <img src="/results/${data.mask_file}" alt="Detection Mask" class="result-image">
+                        </div>
+                    </div>
+                    <div class="solar-potential">
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
+                            <div class="metric-card">
+                                <i class="fas fa-solar-panel" style="color: #0083b0; font-size: 2em;"></i>
+                                <div class="metric-value">${formatEnergyUnit(data.total_generation)}</div>
+                                <div class="metric-label">Annual Energy Generation</div>
+                            </div>
+                            <div class="metric-card">
+                                <i class="fas fa-expand" style="color: #0083b0; font-size: 2em;"></i>
+                                <div class="metric-value">${data.total_area}</div>
+                                <div class="metric-label">Total Rooftop Area</div>
+                            </div>
+                        </div>
+                        <div class="info-card" style="margin-top: 20px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);">
+                            <h3 class="section-title" style="margin-bottom: 15px;">
+                                <i class="fas fa-info-circle"></i>
+                                Technical Information
+                            </h3>
+                            <div>
+                                <strong>Solar Panel Specifications:</strong>
+                                <ul style="list-style: none; padding-left: 20px; margin-top: 5px;">
+                                    <li><i class="fas fa-check" style="color: #0083b0; margin-right: 8px;"></i>Type: ${data.panel_info.type}</li>
+                                    <li><i class="fas fa-check" style="color: #0083b0; margin-right: 8px;"></i>Efficiency: ${data.panel_info.efficiency}%</li>
+                                    <li><i class="fas fa-check" style="color: #0083b0; margin-right: 8px;"></i>Expected Lifespan: ${data.panel_info.lifespan} years</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('results').innerHTML = resultsHtml;
+            })
+            .catch(error => {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('results').innerHTML = `
+                    <div class="error">
+                        <i class="fas fa-exclamation-circle"></i>
+                        Error: ${error.message}
+                    </div>`;
+            });
+        }
+
+        // Try to get user's location
+        if ("geolocation" in navigator) {
+            navigator.geolocation.getCurrentPosition(function(position) {
+                map.setView([position.coords.latitude, position.coords.longitude], 15);
+            });
+        }
+    </script>
+</body>
+</html> 
