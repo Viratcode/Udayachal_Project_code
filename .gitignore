@@ -13,4 +13,4 @@ results/
 .env
 *.pyc
 .DS_Store
-
+model/segformer_model.pth
