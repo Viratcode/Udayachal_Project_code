@@ -2,6 +2,18 @@
 
 **Udayachal** is a sophisticated geospatial web application that leverages deep learning and satellite imagery to automatically detect rooftop areas and calculate solar energy potential across Karnataka, India. The platform combines state-of-the-art semantic segmentation using SegFormer with geospatial processing and solar irradiance data to provide comprehensive solar energy assessments.
 
+# LIVE Project DEMO 
+
+link :- https://drive.google.com/file/d/1vCCyXJX6j3eKMwkKHMgj_3fku2AttXdM/view?usp=sharing
+
+![Uploading image.png…]()
+
+
+
+
+
+
+
 ---
 
 ## Table of Contents
