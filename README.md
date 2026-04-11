@@ -6,14 +6,6 @@
 
 link :- https://drive.google.com/file/d/1vCCyXJX6j3eKMwkKHMgj_3fku2AttXdM/view?usp=sharing
 
-![Uploading image.png…]()
-
-
-
-
-
-
-
 ---
 
 ## Table of Contents
